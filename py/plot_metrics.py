@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 def plot_metrics(
     log_file="training_log.txt",
-    interactive=True,
+    interactive=False,
     save=False,
 ):
 
@@ -49,35 +49,6 @@ def plot_metrics(
 
     if interactive:
         fig = go.Figure()
-
-        # # Loss curves
-        # fig.add_trace(go.Scatter(x=df["epoch"], y=df["train_loss"],
-        #               mode="lines+markers", name="Train Loss", yaxis="y1"))
-        # fig.add_trace(go.Scatter(
-        #     x=df["epoch"], y=df["val_loss"], mode="lines+markers", name="Val Loss", yaxis="y1"))
-
-        # # AUC curves
-        # fig.add_trace(go.Scatter(x=df["epoch"], y=df["t_roc_auc"],
-        #               mode="lines+markers", name="Train ROC-AUC", yaxis="y2"))
-        # fig.add_trace(go.Scatter(x=df["epoch"], y=df["v_roc_auc"],
-        #               mode="lines+markers", name="Val ROC-AUC", yaxis="y2"))
-        # fig.add_trace(go.Scatter(x=df["epoch"], y=df["t_pr_auc"],
-        #               mode="lines+markers", name="Train PR-AUC", yaxis="y2"))
-        # fig.add_trace(go.Scatter(
-        #     x=df["epoch"], y=df["v_pr_auc"], mode="lines+markers", name="Val PR-AUC", yaxis="y2"))
-
-        # # Layout with two y-axes
-        # fig.update_layout(
-        #     title="Training & Validation Metrics",
-        #     xaxis=dict(title="Epoch"),
-        #     yaxis=dict(title="Loss", side="left"),
-        #     yaxis2=dict(title="AUC", overlaying="y",
-        #                 side="right", range=[0, 1]),
-        #     legend=dict(x=0.01, y=0.99),
-        #     template="plotly_white"
-        # )
-
-        # fig.show()
 
         # --- Loss curves (blue palette, solid lines, circles/triangles)
         fig.add_trace(go.Scatter(
@@ -134,25 +105,35 @@ def plot_metrics(
     else:
         fig, ax1 = plt.subplots(figsize=(10, 6))
 
+        # --- Loss curves (blue palette, solid lines, circles/triangles)
         ax1.set_xlabel("Epoch")
         ax1.set_ylabel("Loss")
+
         ax1.plot(df["epoch"], df["train_loss"],
-                 label="Train Loss", color="tab:blue")
+                 label="Train Loss", color="#1f77b4", linestyle="-",
+                 linewidth=2, marker="o")
         ax1.plot(df["epoch"], df["val_loss"],
-                 label="Val Loss", color="tab:cyan")
+                 label="Val Loss", color="#17becf", linestyle="-",
+                 linewidth=2, marker="o")
         ax1.legend(loc="upper left")
 
+        # --- AUC curves (warm/green palette, dashed/dotted lines, squares/diamonds)
         ax2 = ax1.twinx()
         ax2.set_ylabel("AUC")
+
         ax2.plot(df["epoch"], df["t_roc_auc"],
-                 label="Train ROC-AUC", color="tab:red")
+                 label="Train ROC-AUC", color="#d62728", linestyle="--",
+                 linewidth=2, marker="o")
         ax2.plot(df["epoch"], df["v_roc_auc"],
-                 label="Val ROC-AUC", color="tab:orange")
+                 label="Val ROC-AUC", color="#ff7f0e", linestyle="--",
+                 linewidth=2, marker="o")
         ax2.plot(df["epoch"], df["t_pr_auc"],
-                 label="Train PR-AUC", color="tab:green")
+                 label="Train PR-AUC", color="#2ca02c", linestyle=":",
+                 linewidth=2, marker="o")
         ax2.plot(df["epoch"], df["v_pr_auc"],
-                 label="Val PR-AUC", color="tab:olive")
-        ax2.legend(loc="lower right")
+                 label="Val PR-AUC", color="#9467bd", linestyle=":",
+                 linewidth=2, marker="o")
+        ax2.legend(loc="upper right")
 
         plt.title("Training & Validation Metrics")
         plt.tight_layout()

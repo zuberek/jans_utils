@@ -2,7 +2,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 
 
-def plot_tensor(tensor, interactive=False):
+def plotHW(tensor, interactive=False):
     if interactive:
         fig = px.imshow(
             tensor, color_continuous_scale="viridis", origin="upper")
