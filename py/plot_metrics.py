@@ -2,13 +2,18 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from pathlib import Path
+import glob
 
 
 def plot_metrics(
-    log_file="training_log.txt",
+    log_dir: Path | str = "training_log.txt",
     interactive=False,
     save=False,
 ):
+
+    log_dir = str(log_dir)
+    log_file = glob.glob(f"{log_dir}/**/*.out", recursive=True)[0]
 
     # regex patterns
     train_pat = re.compile(
