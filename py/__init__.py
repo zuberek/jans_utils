@@ -4,3 +4,4 @@ from .plot_tensor import plotHW
 from .compare_specs import compare_specs
 from .plot_dir_metrics import plot_dir_metrics
 from .AtrrDict import AttrDict
+from py.tf_debug import print_progress, opt_status, opt_status_pretty
