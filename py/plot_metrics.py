@@ -7,50 +7,14 @@ import glob
 
 
 def plot_metrics(
-    log_dir: Path | str = "training_log.txt",
+    df: pd.DataFrame,
+    run: str,
     interactive=False,
     save=False,
 ):
 
-    log_dir = str(log_dir)
-    log_file = glob.glob(f"{log_dir}/**/*.out", recursive=True)[0]
-
-    # regex patterns
-    train_pat = re.compile(
-        r"Epoch (\d+).*?train_losses: \[([\d.eE+-]+)\].*?t_roc_auc': ([\d.eE+-]+), 't_pr_auc': ([\d.eE+-]+)"
-    )
-    val_pat = re.compile(
-        r"Epoch (\d+).*?val_losses: \[([\d.eE+-]+)\].*?v_roc_auc': ([\d.eE+-]+), 'v_pr_auc': ([\d.eE+-]+)"
-    )
-
-    epochs, train_loss, t_roc, t_pr, val_loss, v_roc, v_pr = [], [], [], [], [], [], []
-
-    with open(log_file) as f:
-        for line in f:
-            m1 = train_pat.search(line)
-            if m1:
-                epochs.append(int(m1.group(1)))
-                train_loss.append(float(m1.group(2)))
-                t_roc.append(float(m1.group(3)))
-                t_pr.append(float(m1.group(4)))
-                continue
-            m2 = val_pat.search(line)
-            if m2:
-                val_loss.append(float(m2.group(2)))
-                v_roc.append(float(m2.group(3)))
-                v_pr.append(float(m2.group(4)))
-
-    df = pd.DataFrame({
-        "epoch": epochs,
-        "train_loss": train_loss,
-        "t_roc_auc": t_roc,
-        "t_pr_auc": t_pr,
-        "val_loss": val_loss,
-        "v_roc_auc": v_roc,
-        "v_pr_auc": v_pr,
-    })
-
-    # print(df.head())
+    df = df[df.run == run]
+    run_labels = df['run_labels'].iloc[0]
 
     if interactive:
         fig = go.Figure()
@@ -91,7 +55,7 @@ def plot_metrics(
 
         # Layout with two y-axes
         fig.update_layout(
-            title="Training & Validation Metrics",
+            title=f"Run {run}: {run_labels}",
             xaxis=dict(title="Epoch"),
             yaxis=dict(title="Loss", side="left"),
             yaxis2=dict(title="AUC", overlaying="y",
@@ -140,6 +104,6 @@ def plot_metrics(
                  linewidth=2, marker="o")
         ax2.legend(loc="upper right")
 
-        plt.title("Training & Validation Metrics")
+        plt.title(f"Run {run}: {run_labels}")
         plt.tight_layout()
         plt.show()

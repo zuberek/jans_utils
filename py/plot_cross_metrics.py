@@ -1,62 +1,41 @@
 # %%
 import glob
-import re
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+
 # %%
 
 
-def plot_cross_metrics(log_dir: Path | str = "logs", metric: str = "v_roc_auc"):
-    log_dir = str(log_dir)
-    train_pat = re.compile(
-        r"Epoch (\d+).*?train_losses: \[([\d.eE+-]+)\].*?t_roc_auc': ([\d.eE+-]+), 't_pr_auc': ([\d.eE+-]+)"
+def plot_cross_metrics(
+    df: pd.DataFrame,
+    log_dir: Path | str,
+    metric: str = "v_pr_auc",
+):
+    # compute last values
+    # best_vals = (
+    #     df.groupby("run")
+    #     .apply(lambda g: g[metric].iloc[-1])
+    #     .to_dict()
+    # )
+    best_vals = (
+        df.groupby("run")[metric]
+        .max()
+        .to_dict()
     )
-    val_pat = re.compile(
-        r"Epoch (\d+).*?val_losses: \[([\d.eE+-]+)\].*?v_roc_auc': ([\d.eE+-]+), 'v_pr_auc': ([\d.eE+-]+)"
-    )
-    rows = []
 
-    for log_file in glob.glob(f"{log_dir}/**/*.out", recursive=True):
-        run_name = log_file.split("/")[-1].replace(".out", "")
-        epochs, train_loss, t_roc, t_pr, val_loss, v_roc, v_pr = [], [], [], [], [], [], []
-        with open(log_file) as f:
-            for line in f:
-                m1 = train_pat.search(line)
-                if m1:
-                    epochs.append(int(m1.group(1)))
-                    train_loss.append(float(m1.group(2)))
-                    t_roc.append(float(m1.group(3)))
-                    t_pr.append(float(m1.group(4)))
-                    continue
-                m2 = val_pat.search(line)
-                if m2:
-                    val_loss.append(float(m2.group(2)))
-                    v_roc.append(float(m2.group(3)))
-                    v_pr.append(float(m2.group(4)))
-        if epochs:
-            for i in range(len(epochs)):
-                rows.append({
-                    "run": run_name,
-                    "epoch": epochs[i],
-                    "train_loss": train_loss[i],
-                    "t_roc_auc": t_roc[i],
-                    "t_pr_auc": t_pr[i],
-                    "val_loss": val_loss[i],
-                    "v_roc_auc": v_roc[i],
-                    "v_pr_auc": v_pr[i],
-                })
+    runs_labels = df.groupby('run')['run_labels'].first()
 
-    df = pd.DataFrame(rows)
-
-    if df.empty:
-        print("No metrics found.")
-        return
+    # sort runs by last metric (descending)
+    sorted_runs = sorted(best_vals, key=best_vals.get, reverse=True)
 
     plt.figure(figsize=(10, 6))
-    for run, subdf in df.groupby("run"):
-        plt.plot(subdf["epoch"], subdf[metric], marker="o", label=run)
+
+    for run in sorted_runs:
+        subdf = df[df["run"] == run]
+        label = f"{run} ({runs_labels.loc[run]})"
+        plt.plot(subdf["epoch"], subdf[metric], marker="o", label=label)
 
     plt.xlabel("Epoch")
     plt.ylabel(metric)
@@ -64,3 +43,16 @@ def plot_cross_metrics(log_dir: Path | str = "logs", metric: str = "v_roc_auc"):
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+    # print(sorted_runs)
+    # print([glob.glob(f"{log_dir / run}/**/*.out", recursive=True)[0]
+    #       for run in sorted_runs])
+
+    from IPython.display import HTML, display
+    links = []
+    for run in sorted_runs:
+        out_file = glob.glob(f"{log_dir / run}/**/*.out", recursive=True)[0]
+        links.append(f'<a href="{out_file}" target="_blank">{run}</a>')
+    display(HTML(" | ".join(links)))
+    # for run in sorted_runs:
+    #     print(f"{run}: {best_vals[run]:.4f}")
