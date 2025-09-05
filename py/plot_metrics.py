@@ -6,6 +6,7 @@ from pathlib import Path
 import glob
 
 
+
 def plot_metrics(
     df: pd.DataFrame,
     run: str,
@@ -102,7 +103,7 @@ def plot_metrics(
         ax2.plot(df["epoch"], df["v_pr_auc"],
                  label="Val PR-AUC", color="#9467bd", linestyle=":",
                  linewidth=2, marker="o")
-        ax2.legend(loc="upper right")
+        ax2.legend(loc="upper right", handlelength=3)
 
         plt.title(f"Run {run}: {run_labels}")
         plt.tight_layout()

@@ -1,4 +1,5 @@
 # %%
+import ast
 import glob
 import re
 import pandas as pd
@@ -7,6 +8,8 @@ from pathlib import Path
 from typing import Dict, List
 
 import json
+
+from .dict_utils import get_nested
 
 
 def normalize_val(v):
@@ -19,6 +22,14 @@ def normalize_val(v):
             return v.split("(")[0]
         return v
     return v
+
+def try_eval(x):
+    if not isinstance(x, str):
+        return x
+    try:
+        return ast.literal_eval(x)
+    except (ValueError, SyntaxError):
+        return x
 
 # %%
 
@@ -37,8 +48,6 @@ def collect_metrics(
     )
     rows = []
 
-    runs_labels = {}
-
     log_file = glob.glob(f"{log_dir}/**/*.out", recursive=True)[0]
 
     for log_file in glob.glob(f"{log_dir}/**/*.out", recursive=True):
@@ -54,17 +63,17 @@ def collect_metrics(
             run_params_file = log_file.parent / "params.json"
             with open(run_params_file) as f:
                 run_params = json.load(f)
-                runs_labels[run_name] = []
+                run_params = {k: try_eval(v) for k, v in run_params.items()}
+
                 for param in label_params:
-                    runs_labels[run_name].append(
-                        {param: normalize_val(run_params[param])})
                     run_labels.append(
-                        {param: normalize_val(run_params[param])})
+                        {param: normalize_val(get_nested(run_params, param))})
 
         epochs, train_loss, t_roc, t_pr, val_loss, v_roc, v_pr = [], [], [], [], [], [], []
         with open(log_file) as f:
             for line in f:
                 m1 = train_pat.search(line)
+
                 if m1:
                     epochs.append(int(m1.group(1)))
                     train_loss.append(float(m1.group(2)))
@@ -76,8 +85,9 @@ def collect_metrics(
                     val_loss.append(float(m2.group(2)))
                     v_roc.append(float(m2.group(3)))
                     v_pr.append(float(m2.group(4)))
-        if epochs:
-            for i in range(len(epochs)):
+
+        if val_loss:
+            for i in range(len(val_loss)):
                 rows.append({
                     "run": run_name,
                     "epoch": epochs[i],
@@ -95,4 +105,31 @@ def collect_metrics(
     if df.empty:
         raise Exception("No metrics found")
 
-    return df, runs_labels
+    return df
+
+
+# %%
+
+def extract_dataset_sizes(file_path: str | Path) -> dict[str, dict[str, int]]:
+    """
+    Parse lines like:
+        Dataset DS_27-08-2025 | size: 1267
+    and return a dict of dataset names and counts.
+
+    Args:
+        file_path: Path to the file to search.
+
+    Returns:
+        dict: {dataset_name: {"count": size}}
+    """
+    pattern = re.compile(r"Dataset\s+(\S+)\s+\|\s+size:\s+(\d+)")
+    results: dict[str, dict[str, int]] = {}
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            match = pattern.search(line)
+            if match:
+                name, size = match.groups()
+                results[name] = {"count": int(size)}
+
+    return results

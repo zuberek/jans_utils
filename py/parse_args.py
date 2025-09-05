@@ -19,12 +19,17 @@ def parse(cli_command: str) -> SafeNamespace:
     while i < len(parts):
         if parts[i].startswith("--"):
             name = parts[i][2:].replace("-", "_")
-            if i+1 < len(parts) and not parts[i+1].startswith("--"):
-                vars_dict[name] = parts[i+1]
-                i += 2
+            values = []
+            j = i + 1
+            while j < len(parts) and not parts[j].startswith("--"):
+                values.append(parts[j])
+                j += 1
+            if values:
+                # single value → str, multiple → list
+                vars_dict[name] = values if len(values) > 1 else values[0]
             else:
                 vars_dict[name] = True
-                i += 1
+            i = j
         else:
             i += 1
 
