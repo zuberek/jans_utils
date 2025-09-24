@@ -7,16 +7,17 @@ from typing import Dict, List, Any
 
 # %%
 
-
-def opt_status(opts: Dict[str, Any], fields=[]) -> List[Any]:
-    out: List[Any] = [
-        tf.as_string(tf.timestamp(), precision=3),
-        opts["exam_id"],
-        opts["bscan_index"],
-    ]
-    for f in fields:
-        out.extend([f, tf.shape(opts[f])])
-    return out
+def opt_status(fields=[]):
+    def fn(opts: Dict[str, Any]):
+        out: List[Any] = [
+            tf.as_string(tf.timestamp(), precision=3),
+            opts["exam_id"],
+            opts["bscan_index"],
+        ]
+        for f in fields:
+            out.extend([f, tf.shape(opts[f])])
+        return out
+    return fn
 
 
 def opt_status_pretty(opts: Dict[str, Any], fields=None, exam_chars: int = 12) -> pd.DataFrame:
@@ -29,7 +30,7 @@ def opt_status_pretty(opts: Dict[str, Any], fields=None, exam_chars: int = 12) -
             "exam_id", "bscan_index")]
 
     # unpack opt_status into pieces
-    status = opt_status(opts, fields=fields)
+    status = opt_status(fields=fields)(opts)
     ts, exam_ids, bscan_indices, *field_pairs = status
 
     # unify exam_ids and indices into arrays
@@ -61,8 +62,8 @@ def opt_status_pretty(opts: Dict[str, Any], fields=None, exam_chars: int = 12) -
     return df
 
 
-def print_progress():
+def print_progress(fields):
     def fn(opts: Dict[str, Any]) -> Dict[str, Any]:
-        tf.print(opt_status(opts))
+        tf.print(opt_status(fields)(opts))
         return opts
     return fn
