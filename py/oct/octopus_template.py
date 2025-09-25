@@ -6,9 +6,14 @@ from typing import Dict, List, Any
 
 import tensorflow as tf
 
+from framework.data.pipelines.cache import Cache
 from py.oct.imports import *
+from py import *
 
 from envvars import ENV
+
+EXP_DATASET_PATH = str(Path(ENV.DATA_DIR) / 'datasets' / 'DS_27-08-2025')
+
 
 # %%
 class EvalExampleCombs(ParamsCombinations):
@@ -27,16 +32,20 @@ class GenerateDataset(EvalConfig):
                                    model: tf.keras.Model,
                                    metrics: Dict[str, tf.keras.metrics.Metric]) -> tf.data.Dataset:
         
+        ds = Load(EXP_DATASET_PATH, 'anom-train')()
 
-        # Prepare output dir
-        save_ds_path = params['run_output_folder'] / Path(params['dataset_name'])
-        if os.path.exists(save_ds_path):
-            shutil.rmtree(save_ds_path)
-        os.makedirs(save_ds_path)
 
-        ds = tf.data.TFRecordDataset(anom_tfrecs_paths_str)
+        ds = ds.take(100)
+        
+        ds = Print(opt_status(fields=['input']))(ds)
+
+        # # Prepare output dir
+        # save_ds_path = params['run_output_folder'] / Path(params['dataset_name'])
+        # if os.path.exists(save_ds_path):
+        #     shutil.rmtree(save_ds_path)
+        # os.makedirs(save_ds_path)
   
-        ds = Save(save_dir=str(save_ds_path), save_name='anom-data', return_empty_ds=False)(ds)
+        # ds = Save(save_dir=str(save_ds_path), save_name='anom-data', return_empty_ds=False)(ds)
         
         return ds
 
@@ -56,5 +65,4 @@ parameters = EvaluationExperimentParams(eval_config=GenerateDataset(),
                                         combinations=EvalExampleCombs(),
                                         common_params=CommonExpParams(**parameters))
 
-from py import AttrDict
 params = AttrDict(**dict(parameters.items()), **parameters.combinations.get_combination_by_ind(0))
