@@ -7,13 +7,14 @@ from typing import Dict, List, Any
 
 # %%
 
-def opt_status(fields=[]):
+def opt_status(fields=[], name:str|None=None):
     def fn(opts: Dict[str, Any]):
         out: List[Any] = [
             tf.as_string(tf.timestamp(), precision=3),
             opts["exam_id"],
             opts["bscan_index"],
         ]
+        if name: out.append(name)
         for f in fields:
             out.extend([f, tf.shape(opts[f])])
         return out
@@ -62,8 +63,14 @@ def opt_status_pretty(opts: Dict[str, Any], fields=None, exam_chars: int = 12) -
     return df
 
 
-def print_progress(fields):
-    def fn(opts: Dict[str, Any]) -> Dict[str, Any]:
-        tf.print(opt_status(fields)(opts))
-        return opts
+def print_progress(extra_fields: List[str], name: str|None = None):
+    """
+    Attach a progress-printing transformation to a TensorFlow dataset.
+    """
+    def fn(ds: tf.data.Dataset):
+        def print_opts_status(opts):
+            tf.print(opt_status(extra_fields, name)(opts))
+            return opts
+
+        return ds.map(print_opts_status)
     return fn

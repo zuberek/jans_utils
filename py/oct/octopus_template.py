@@ -37,7 +37,7 @@ class GenerateDataset(EvalConfig):
 
         ds = ds.take(100)
         
-        ds = Print(opt_status(fields=['input']))(ds)
+        ds = print_progress(['input'], 'AFTER TAKE')(ds)
 
         # # Prepare output dir
         # save_ds_path = params['run_output_folder'] / Path(params['dataset_name'])
@@ -64,5 +64,6 @@ parameters = {
 parameters = EvaluationExperimentParams(eval_config=GenerateDataset(),
                                         combinations=EvalExampleCombs(),
                                         common_params=CommonExpParams(**parameters))
-
-params = AttrDict(**dict(parameters.items()), **parameters.combinations.get_combination_by_ind(0))
+# %%
+from py import * 
+init()

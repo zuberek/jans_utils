@@ -2,23 +2,31 @@ from typing import Any, Dict, List
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-
-from py import plotHW
+import matplotlib.pyplot as plt 
+from py import plotHW, plotCW
 
 
 class OPTS:
     """Wrapper for a single dataset element with dict + attribute access."""
     
-    def __init__(self, ds: tf.data.Dataset):
+    def __init__(self, dataset: tf.data.Dataset = None):
         """Create OPT from first element of a tf.data.Dataset."""
-        data = next(iter(ds))  # eager execution
+        from IPython import get_ipython
+        ipy = get_ipython()
+
+        if dataset is None:
+            dataset = ipy.user_ns.get("ds", None)
+            if dataset is None:
+                print("No dataset provided and no 'ds' variable in user namespace.")
+                return
+
+        data = next(iter(dataset))  # eager execution
         self._data = data
         self._is_batched = self._check_batched()
 
         # Inject into interactive namespace
-        from IPython import get_ipython
-        ipy = get_ipython()
         ipy.user_ns['opts'] = self
+
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OPTS":
@@ -48,6 +56,7 @@ class OPTS:
         if isinstance(key, int):
             if not self._is_batched:
                 print('Trying to index unbatched opts')
+                return
             new_data = {}
             for k, v in self._data.items():
                 if hasattr(v, "shape") and len(v.shape) > 0:
@@ -89,7 +98,14 @@ class OPTS:
     def __repr__(self):
         return repr(self._data)
     
-    def plot(self, field: str, channel: int = None):
+    def plotHW(
+        self, 
+        field: str, 
+        borders=True, 
+        channel: int = None, 
+        legend=False,
+        step=1,
+    ):
         shape = self._data[field].shape
         rank = len(shape)
         assert rank == 3 or rank == 4, "This is not an (N)HWC tensor!"
@@ -102,8 +118,14 @@ class OPTS:
             if channel: tensor = tensor[..., channel]
             else: tensor = tensor[..., 0] # HW1
             
-        plotHW(tensor)
-
+        ax = plotHW(tensor, legend=False)
+        
+        if borders and 'borders' in self._data:
+            borders_tensor = self._data['borders']
+            ax = plotCW(ax, borders_tensor, step=step, legend=legend)
+            
+        plt.show()
+            
 
     def print(self, 
               fields: List[str] | None = None, 
