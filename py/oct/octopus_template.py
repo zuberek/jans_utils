@@ -66,4 +66,4 @@ parameters = EvaluationExperimentParams(eval_config=GenerateDataset(),
                                         common_params=CommonExpParams(**parameters))
 # %%
 from py import * 
-init()
+init(parameters)

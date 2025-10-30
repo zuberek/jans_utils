@@ -4,14 +4,25 @@ from py.oct.config import BORDER_COLORS, POSTERIOR_BORDER_ORDER
 import numpy as np
 
 
-def plotHW(tensor, interactive=False, legend=False):
+def plotHW(tensor, interactive=False, legend=False, multichannel=False):
     if interactive:
         fig = px.imshow(
             tensor, color_continuous_scale="viridis", origin="upper")
         fig.show()
     else:
         ax = plt.gca()  # get current axis
-        im = ax.imshow(tensor.numpy(), vmin=0, vmax=1, cmap="viridis")
+        arr = tensor.numpy()
+        if not multichannel:
+            im = ax.imshow(arr, vmin=0, vmax=1, cmap="viridis")
+        else:
+            # plot first channel fully
+            im = ax.imshow(arr[..., 0], vmin=0, vmax=1, cmap="Greys")
+            # overlay others only where >0
+            cmaps = ['Reds', 'Greens', 'Blues', 'Purples', 'Oranges']
+            for c in range(1, arr.shape[-1]):
+                masked = np.ma.masked_where(arr[..., c] < 1e-6, arr[..., c])
+                ax.imshow(masked, cmap=plt.get_cmap(cmaps[c % len(cmaps)]), vmin=0, vmax=1, alpha=0.7)
+
         if legend: plt.colorbar(im, ax=ax)
         return ax   # return Axes, not AxesImage
 

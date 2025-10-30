@@ -1,9 +1,12 @@
+# %%
 from typing import Any, Dict, List
 import tensorflow as tf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
 from py import plotHW, plotCW
+from tqdm import tqdm
+
 
 
 class OPTS:
@@ -104,6 +107,7 @@ class OPTS:
         borders=True, 
         channel: int = None, 
         legend=False,
+        multichannel=False,
         step=1,
     ):
         shape = self._data[field].shape
@@ -116,9 +120,10 @@ class OPTS:
             tensor = tensor[0] # HWC
         if is_multichannel:
             if channel: tensor = tensor[..., channel]
+            elif multichannel: pass
             else: tensor = tensor[..., 0] # HW1
             
-        ax = plotHW(tensor, legend=False)
+        ax = plotHW(tensor, legend=False, multichannel=multichannel)
         
         if borders and 'borders' in self._data:
             borders_tensor = self._data['borders']
@@ -224,6 +229,53 @@ def format_item(k,v, exam_chars=12):
         dtype_str = type(v).__name__
         
     return {"name": k, "preview": preview, "shape": shape, "dtype": dtype_str}
+
+
+def find_example(ds: tf.data.Dataset, conditions: dict, max_iter=10_000):
+    """
+    Iterate over dataset until example matches all conditions.
+
+    Args:
+        ds: tf.data.Dataset
+        conditions: dict of {key: expected_value}, compared via equality.
+        max_iter: safety stop to avoid infinite loops.
+
+    Returns:
+        tf.data.Dataset with one element or a single example dict, or None if not found.
+    """
+    # Try to get cardinality
+    try:
+        card = tf.data.experimental.cardinality(ds).numpy()
+        if card < 0:  # -1 or -2 => unknown / infinite
+            card = None
+    except Exception:
+        card = None
+
+    it = iter(ds)
+    for i in tqdm(range(max_iter), total=card, desc="Searching dataset"):
+        try:
+            ex = next(it)
+        except StopIteration:
+            break
+
+        match = True
+        for key, expected in conditions.items():
+            val = ex[key].numpy()
+            if hasattr(val, "item") and val.shape == ():  # scalar tensor
+                val = val.item()
+            if isinstance(val, (bytes, bytearray)):
+                val = val.decode("utf-8")
+            if val != expected:
+                match = False
+                break
+
+        if match:
+            print(f'Found specified example at position {i}')
+            return tf.data.Dataset.from_tensors(ex).repeat()
+
+    print("Did not find specified example")
+    return ds
+
 
 class DS:
     """Debugging wrapper for tf.data.Dataset."""
