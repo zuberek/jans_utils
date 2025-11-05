@@ -1,11 +1,11 @@
-from py.oct.imports import *
-from py.AtrrDict import AttrDict
+from jan.py.oct.imports import *
+from jan.py.AtrrDict import AttrDict
 from envvars import ENV
 
 # %%
 
 LOCAL_RUN = True
-VISUALIZE = True
+VISUALIZE = False
 DUMP_VAL_RESULTS_TO_NPY = False
 EXP_DATASET_PATH = str(Path(ENV.DATA_DIR) / 'datasets' / 'DS_27-08-2025')
 TRAIN_OUT_DIR = Path(ENV.EXPERIMENTS_DIR) / 'TEST_MODELS'

@@ -4,13 +4,16 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
-from py import plotHW, plotCW
+from jan.py import plotHW, plotCW, plotHWC
+from jan.py.py_utils import _get_target_namespace
 from tqdm import tqdm
 
 
 
 class OPTS:
     """Wrapper for a single dataset element with dict + attribute access."""
+    
+    _data: Dict[str, Any]
     
     def __init__(self, dataset: tf.data.Dataset = None):
         """Create OPT from first element of a tf.data.Dataset."""
@@ -37,6 +40,9 @@ class OPTS:
         obj = cls.__new__(cls)   # bypass __init__
         obj._data = data
         obj._is_batched = obj._check_batched()
+        
+        namespace = _get_target_namespace()
+        namespace['opts'] = obj
         return obj
     
     def _check_batched(self) -> bool:
@@ -101,13 +107,17 @@ class OPTS:
     def __repr__(self):
         return repr(self._data)
     
-    def plotHW(
+    def _repr_html_(self):
+        return self.print()._repr_html_()
+    
+    
+    def plot(
         self, 
         field: str, 
-        borders=True, 
-        channel: int = None, 
+        borders=True,
+        output=True, 
+        channel: int | None = None, 
         legend=False,
-        multichannel=False,
         step=1,
     ):
         shape = self._data[field].shape
@@ -120,10 +130,15 @@ class OPTS:
             tensor = tensor[0] # HWC
         if is_multichannel:
             if channel: tensor = tensor[..., channel]
-            elif multichannel: pass
             else: tensor = tensor[..., 0] # HW1
             
-        ax = plotHW(tensor, legend=False, multichannel=multichannel)
+        ax = plotHW(tensor, legend=False)
+        
+        if output and ('output' in self._data or 'model_output' in self._data):
+            output_key = 'output' if 'output' in self._data else 'model_output'
+            output_tensor = self._data[output_key]
+            ax = plotHWC(output_tensor, ax)
+            
         
         if borders and 'borders' in self._data:
             borders_tensor = self._data['borders']
@@ -280,13 +295,76 @@ def find_example(ds: tf.data.Dataset, conditions: dict, max_iter=10_000):
 class DS:
     """Debugging wrapper for tf.data.Dataset."""
 
-    def __init__(self, dataset: tf.data.Dataset):
+    def __init__(self, dataset: tf.data.Dataset=None):
+        namespace = _get_target_namespace()
+        
+        if dataset is None:
+            dataset = namespace.get('ds')
+            if dataset is None:
+                print("No dataset provided and no 'ds' variable in user namespace.")
+                return
+            
         self._dataset = dataset
+
+    def __repr__(self):
+        return repr(self._dataset)
+    
 
     def __getattr__(self, name):
         # delegate everything else to the underlying dataset
         return getattr(self._dataset, name)
+    
+    def get(self, bscan_index) -> OPTS:
+        return OPTS.from_dict(next(iter(self._dataset.skip(bscan_index-1).take(1))))
+    
+    def vis(self, bscan_index, field='input', **plot_kwargs):
+        opts = self.get(bscan_index)
+        opts.plot(field, **plot_kwargs)
 
     def next(self) -> OPTS:
         """Return next element wrapped as OPT."""
-        return OPTS(next(iter(self._dataset)))
+        return OPTS.from_dict(next(iter(self._dataset)))
+    
+    def find(self, conditions: dict, max_iter=10_000):
+        """
+        Iterate over dataset until example matches all conditions.
+
+        Args:
+            ds: tf.data.Dataset
+            conditions: dict of {key: expected_value}, compared via equality.
+            max_iter: safety stop to avoid infinite loops.
+
+        Returns:
+            tf.data.Dataset with one element or a single example dict, or None if not found.
+        """
+        # Try to get cardinality
+        try:
+            card = tf.data.experimental.cardinality(self._dataset).numpy()
+            if card < 0:  # -1 or -2 => unknown / infinite
+                card = None
+        except Exception:
+            card = None
+
+        it = iter(self._dataset)
+        for i in tqdm(range(max_iter), total=card, desc="Searching dataset"):
+            try:
+                ex = next(it)
+            except StopIteration:
+                break
+
+            match = True
+            for key, expected in conditions.items():
+                val = ex[key].numpy()
+                if hasattr(val, "item") and val.shape == ():  # scalar tensor
+                    val = val.item()
+                if isinstance(val, (bytes, bytearray)):
+                    val = val.decode("utf-8")
+                if val != expected:
+                    match = False
+                    break
+
+            if match:
+                print(f'Found specified example at position {i}')
+                return OPTS.from_dict(ex)
+
+        print("Did not find specified example")

@@ -7,8 +7,8 @@ from typing import Dict, List, Any
 import tensorflow as tf
 
 from framework.data.pipelines.cache import Cache
-from py.oct.imports import *
-from py import *
+from jan.py.oct.imports import *
+from jan.py import *
 
 from envvars import ENV
 
@@ -65,5 +65,5 @@ parameters = EvaluationExperimentParams(eval_config=GenerateDataset(),
                                         combinations=EvalExampleCombs(),
                                         common_params=CommonExpParams(**parameters))
 # %%
-from py import * 
+from jan.py import * 
 init(parameters)

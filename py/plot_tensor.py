@@ -1,10 +1,12 @@
+# %%
 import plotly.express as px
 import matplotlib.pyplot as plt
-from py.oct.config import BORDER_COLORS, POSTERIOR_BORDER_ORDER
+from jan.py.oct.config import BORDER_COLORS, POSTERIOR_BORDER_ORDER
 import numpy as np
 
+# %% 
 
-def plotHW(tensor, interactive=False, legend=False, multichannel=False):
+def plotHW(tensor, interactive=False, legend=False):
     if interactive:
         fig = px.imshow(
             tensor, color_continuous_scale="viridis", origin="upper")
@@ -12,19 +14,18 @@ def plotHW(tensor, interactive=False, legend=False, multichannel=False):
     else:
         ax = plt.gca()  # get current axis
         arr = tensor.numpy()
-        if not multichannel:
-            im = ax.imshow(arr, vmin=0, vmax=1, cmap="viridis")
-        else:
-            # plot first channel fully
-            im = ax.imshow(arr[..., 0], vmin=0, vmax=1, cmap="Greys")
-            # overlay others only where >0
-            cmaps = ['Reds', 'Greens', 'Blues', 'Purples', 'Oranges']
-            for c in range(1, arr.shape[-1]):
-                masked = np.ma.masked_where(arr[..., c] < 1e-6, arr[..., c])
-                ax.imshow(masked, cmap=plt.get_cmap(cmaps[c % len(cmaps)]), vmin=0, vmax=1, alpha=0.7)
+        im = ax.imshow(arr, vmin=0, vmax=1, cmap="viridis")
 
         if legend: plt.colorbar(im, ax=ax)
         return ax   # return Axes, not AxesImage
+    
+def plotHWC(tensor, ax=None, threshold=1e-6, cmaps=None, **imshow_kwargs):
+    ax = ax if ax else plt.gca() 
+    cmaps = cmaps if cmaps else ['Reds', 'Greens', 'Blues', 'Purples', 'Oranges']
+    arr = tensor.numpy()
+    for c in range(arr.shape[-1]):
+        masked = np.ma.masked_where(arr[..., c] < threshold, arr[..., c])
+        ax.imshow(masked, cmap=plt.get_cmap(cmaps[c % len(cmaps)]), **imshow_kwargs)
 
 
 def plotCW(ax, cw_tensor, step: int = 1, legend=False):
