@@ -32,7 +32,9 @@ class GenerateDataset(EvalConfig):
                                    model: tf.keras.Model,
                                    metrics: Dict[str, tf.keras.metrics.Metric]) -> tf.data.Dataset:
         
-        ds = Load(EXP_DATASET_PATH, 'anom-train')()
+        dpath = Path(params['data_path'])
+        dpath = Path('/home/jdabrowski/data/datasets/external/CNV-1')
+        ds = Load(str(dpath.parent), dpath.name)()
 
 
         ds = ds.take(100)
@@ -58,7 +60,9 @@ parameters = {
     'num_gpus': 1,
     'n_threads': 6,
     'out_dir': ENV.EXPERIMENTS_DIR,
-    'run_output_folder': ENV.DATA_DIR
+    'run_output_folder': ENV.DATA_DIR,
+    # 'data_path': str(Path(ENV.DATA_DIR)/'anomaly'/'DS_27-08-2025'/'saved_ds_ver2_mb'/'anom-test'),
+    'data_path': str('/home/jdabrowski/data/datasets/external/CNV-1'),
 }
 
 parameters = EvaluationExperimentParams(eval_config=GenerateDataset(),

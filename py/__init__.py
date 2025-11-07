@@ -9,7 +9,8 @@ from jan.py.collect_metrics import collect_metrics, extract_dataset_sizes
 from jan.py.ds_utils import get_ds_info
 from jan.py.dict_utils import get_nested
 from jan.py.tf_debugging import OPTS, DS, find_example
-from jan.py.py_utils import inject_to_ipy, fake_self, inject
+from jan.py.py_utils import inject_to_ipy, fake_self, inject, _get_target_namespace
+from jan.py.PyTimer import timer
 
 from jan.py.oct import *
 

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from jan.py import plotHW, plotCW, plotHWC
 from jan.py.py_utils import _get_target_namespace
 from tqdm import tqdm
+from pathlib import Path
 
 
 
@@ -113,12 +114,15 @@ class OPTS:
     
     def plot(
         self, 
-        field: str, 
+        field: str='input', 
         borders=True,
         output=True, 
+        input=True,
         channel: int | None = None, 
-        legend=False,
+        legend=True,
         step=1,
+        title_suffix='',
+        save: Path | None = None,
     ):
         shape = self._data[field].shape
         rank = len(shape)
@@ -131,20 +135,37 @@ class OPTS:
         if is_multichannel:
             if channel: tensor = tensor[..., channel]
             else: tensor = tensor[..., 0] # HW1
-            
-        ax = plotHW(tensor, legend=False)
+        
+        fig, ax = plt.subplots()      
+          
+        if input:    
+            ax = plotHW(tensor, ax=ax,  legend=False)
         
         if output and ('output' in self._data or 'model_output' in self._data):
             output_key = 'output' if 'output' in self._data else 'model_output'
             output_tensor = self._data[output_key]
-            ax = plotHWC(output_tensor, ax)
-            
+            output_classes = self._data['output_classes'].numpy() if 'output_classes' in self._data else None
+            output_classes = [c.decode() for c in output_classes] if output_classes is not None else None
+            ax = plotHWC(output_tensor, ax, threshold=0.1, labels=output_classes, legend=legend)
         
         if borders and 'borders' in self._data:
             borders_tensor = self._data['borders']
-            ax = plotCW(ax, borders_tensor, step=step, legend=legend)
+            border_names = self._data['border_names'].numpy() if 'border_names' in self._data else None
+            border_names = [c.decode() for c in border_names] if border_names is not None else None
+            ax = plotCW(borders_tensor, ax, border_names, step=step, legend=legend)
             
-        plt.show()
+        exam = self._data['exam_id'].numpy().decode()
+        bscan = self._data['bscan_index'].numpy()
+        x_size_px = self._data['x_size_px'].numpy()
+        z_size_px = self._data['z_size_px'].numpy()
+        ax.set_title(f'{exam=}\n{bscan=} | {x_size_px=} | {z_size_px=}'+title_suffix)
+        
+        if save:
+            save.mkdir(parents=True, exist_ok=True)
+            ax.figure.savefig(save/f'{exam}_{bscan}.png', dpi=150, bbox_inches="tight")
+            plt.close(ax.figure)
+        else:
+            return ax
             
 
     def print(self, 
@@ -291,12 +312,34 @@ def find_example(ds: tf.data.Dataset, conditions: dict, max_iter=10_000):
     print("Did not find specified example")
     return ds
 
+from pathlib import Path
+from utils import get_shard_idxs, select_shards # diagnosing
+from framework.data.pipelines.load import Load
 
 class DS:
     """Debugging wrapper for tf.data.Dataset."""
+    
+    _dataset: tf.data.Dataset
 
-    def __init__(self, dataset: tf.data.Dataset=None):
+    def __init__(
+        self, 
+        dataset: tf.data.Dataset | Path | str | None = None,
+        exam_names = None,
+    ):
         namespace = _get_target_namespace()
+        
+        if isinstance(dataset, Path) or isinstance(dataset, str):
+            dpath = Path(dataset)
+            
+            def reader_func(shards):
+                if exam_names:
+                    shard_idxs = get_shard_idxs(dpath, exam_names)
+                    shards = select_shards(shards, shard_idxs)
+                shards = shards.flat_map(lambda x: x)
+                return shards
+            
+            dataset = Load(str(dpath.parent), dpath.name, 
+                reader_func=reader_func)()
         
         if dataset is None:
             dataset = namespace.get('ds')
@@ -305,10 +348,10 @@ class DS:
                 return
             
         self._dataset = dataset
+        self.ds = dataset
 
     def __repr__(self):
         return repr(self._dataset)
-    
 
     def __getattr__(self, name):
         # delegate everything else to the underlying dataset
@@ -324,6 +367,12 @@ class DS:
     def next(self) -> OPTS:
         """Return next element wrapped as OPT."""
         return OPTS.from_dict(next(iter(self._dataset)))
+    
+    def head(self, n_elem, keys=['exam_id', 'bscan_index']):
+        for x in self._dataset.take(n_elem):
+            vals = [x[key].numpy() for key in keys]
+            vals = [val.decode() if isinstance(val, bytes) else val for val in vals]
+            print(vals)
     
     def find(self, conditions: dict, max_iter=10_000):
         """

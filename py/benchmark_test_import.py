@@ -16,10 +16,10 @@ python /home/jdabrowski/code/jan/jan/py/benchmark_test_import.py
 """
 
 module_paths = [
-    "jan.py.benchmark_scripts.test_load_basic",
-    # "jan.py.benchmark_scripts.test_load_round_051125",
-    # "jan.py.benchmark_scripts.test_load_seq_051125",
-    # "jan.py.benchmark_scripts.test_load_specific_shard_051125",
+    # "jan.py.benchmark_scripts.test_load_basic",
+    "jan.py.benchmark_scripts.test_load_round_051125",
+    "jan.py.benchmark_scripts.test_load_seq_051125",
+    "jan.py.benchmark_scripts.test_load_specific_shard_051125",
 ]
 
 def load_func(mod_path):
