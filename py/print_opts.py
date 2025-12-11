@@ -63,7 +63,7 @@ def opt_status_pretty(opts: Dict[str, Any], fields=None, exam_chars: int = 12) -
     return df
 
 
-def print_progress(extra_fields: List[str], name: str|None = None):
+def print_progress2(extra_fields: List[str], name: str|None = None):
     """
     Attach a progress-printing transformation to a TensorFlow dataset.
     """

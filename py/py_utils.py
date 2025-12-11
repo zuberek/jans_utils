@@ -52,7 +52,7 @@ def inject_callable_defaults(target: Callable):
     print('### defaults')
     sig = inspect.signature(target.__init__ if inspect.isclass(target) else target)
     for name, param in sig.parameters.items():
-        if param.default is not inspect.Parameter.empty:
+        if param.default is not inspect.Parameter.empty and name not in namespace:
             namespace[name] = param.default
             print(f"{name} = {param.default!r}")
 

@@ -81,8 +81,9 @@ def plotCW(cw_tensor, ax=None, c_names=None, step: int = 1, legend=False):
         ax.plot(x, y, color=color, linewidth=1.0, label=name)
 
     if legend:
-        ax.add_artist(
-            ax.legend(bbox_to_anchor=(1.02, 0), ncol=3, borderaxespad=0,  loc="lower left")
-        )
+        leg = ax.legend(bbox_to_anchor=(1.02, 0), ncol=3, borderaxespad=0,  loc="lower left")
+        for line in leg.get_lines():
+            line.set_linewidth(3)
+        ax.add_artist(leg)
 
     return ax

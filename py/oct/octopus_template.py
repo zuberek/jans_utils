@@ -35,7 +35,17 @@ class GenerateDataset(EvalConfig):
         dpath = Path(params['data_path'])
         dpath = Path('/home/jdabrowski/data/datasets/external/CNV-1')
         ds = Load(str(dpath.parent), dpath.name)()
-
+        
+        def process_label(opts):
+            raster = opts['input']
+            H, W, _ = tf.unstack(tf.shape(raster))
+            num_classes = tf.shape(opts["label_names"])[-1]
+            label = tf.sparse.to_dense(opts['label'])
+            label = tf.tile(label, [1, 1, num_classes])  # [H,W,C]
+            label = tf.sparse.from_dense(label)
+            return {**opts, "label": label}
+        
+        ds = Map(process_label)(ds)
 
         ds = ds.take(100)
         

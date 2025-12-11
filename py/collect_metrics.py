@@ -9,8 +9,9 @@ from typing import Dict, List
 
 import json
 
-from .dict_utils import get_nested
+from jan.py.dict_utils import get_nested, pop_nested
 
+# %%
 
 def normalize_val(v):
     if isinstance(v, str):
@@ -37,15 +38,30 @@ def try_eval(x):
 def collect_metrics(
     log_dir: Path | str = "logs",
     label_params: List[str] | None = None,
-    ignore_runs: List[str] | None = None,
+    ignore_runs: List[str] = [],
+    select_runs: List[str] = [],
+    ignore_subparams: List[str] = [],
 ):
     log_dir = Path(log_dir)
+    # train_pat = re.compile(
+    #     r"Epoch (\d+).*?train_losses: \[([\d.eE+-]+)\].*?t_roc_auc': ([\d.eE+-]+), 't_pr_auc': ([\d.eE+-]+)"
+    # )
+    # val_pat = re.compile(
+    #     r"Epoch (\d+).*?val_losses: \[([\d.eE+-]+)\].*?v_roc_auc': ([\d.eE+-]+), 'v_pr_auc': ([\d.eE+-]+)"
+    # )
     train_pat = re.compile(
-        r"Epoch (\d+).*?train_losses: \[([\d.eE+-]+)\].*?t_roc_auc': ([\d.eE+-]+), 't_pr_auc': ([\d.eE+-]+)"
+        r"Epoch (\d+), train time: ([\d.eE+-]+)s.*?"
+        r"train_losses: \[([\d.eE+-]+)\].*?"
+        r"t_roc_auc': ([\d.eE+-]+), 't_pr_auc': ([\d.eE+-]+)"
     )
+
     val_pat = re.compile(
-        r"Epoch (\d+).*?val_losses: \[([\d.eE+-]+)\].*?v_roc_auc': ([\d.eE+-]+), 'v_pr_auc': ([\d.eE+-]+)"
+        r"Epoch (\d+), validation time: ([\d.eE+-]+)s.*?"
+        r"val_losses: \[([\d.eE+-]+)\].*?"
+        r"v_roc_auc': ([\d.eE+-]+), 'v_pr_auc': ([\d.eE+-]+)"
     )
+
+
     rows = []
 
     log_file = glob.glob(f"{log_dir}/**/*.out", recursive=True)[0]
@@ -54,9 +70,11 @@ def collect_metrics(
         # run_name = log_file.split("/")[-1].replace(".out", "")
         log_file = Path(log_file)
         run_name = log_file.parent.name
-        if ignore_runs:
-            if run_name in ignore_runs:
-                continue
+        
+        if run_name in ignore_runs:
+            continue
+        if len(select_runs)!=0 and run_name not in select_runs:
+            continue
 
         run_labels = []
         if label_params:
@@ -64,36 +82,52 @@ def collect_metrics(
             with open(run_params_file) as f:
                 run_params = json.load(f)
                 run_params = {k: try_eval(v) for k, v in run_params.items()}
-
+                
                 for param in label_params:
-                    run_labels.append(
-                        {param: normalize_val(get_nested(run_params, param))})
+                    val = normalize_val(get_nested(run_params, param))
+                    if val is not None and isinstance(val, dict):
+                        for k in ignore_subparams:
+                            pop_nested(val, k)
+                    run_labels.append({param: val})
 
         epochs, train_loss, t_roc, t_pr, val_loss, v_roc, v_pr = [], [], [], [], [], [], []
+        train_time, val_time = [], []
         with open(log_file) as f:
             for line in f:
                 m1 = train_pat.search(line)
 
                 if m1:
                     epochs.append(int(m1.group(1)))
-                    train_loss.append(float(m1.group(2)))
-                    t_roc.append(float(m1.group(3)))
-                    t_pr.append(float(m1.group(4)))
+                    train_time.append(float(m1.group(2)))
+                    train_loss.append(float(m1.group(3)))
+                    t_roc.append(float(m1.group(4)))
+                    t_pr.append(float(m1.group(5)))
+                    # epochs.append(int(m1.group(1)))
+                    # train_loss.append(float(m1.group(2)))
+                    # t_roc.append(float(m1.group(3)))
+                    # t_pr.append(float(m1.group(4)))
                     continue
                 m2 = val_pat.search(line)
                 if m2:
-                    val_loss.append(float(m2.group(2)))
-                    v_roc.append(float(m2.group(3)))
-                    v_pr.append(float(m2.group(4)))
+                    val_time.append(float(m2.group(2)))
+                    val_loss.append(float(m2.group(3)))
+                    v_roc.append(float(m2.group(4)))
+                    v_pr.append(float(m2.group(5)))
+                    # val_time.append(float(m2.group(2)))
+                    # val_loss.append(float(m2.group(2)))
+                    # v_roc.append(float(m2.group(3)))
+                    # v_pr.append(float(m2.group(4)))
 
         if val_loss:
             for i in range(len(val_loss)):
                 rows.append({
                     "run": run_name,
                     "epoch": epochs[i],
+                    "train_time": train_time[i],
                     "train_loss": train_loss[i],
                     "t_roc_auc": t_roc[i],
                     "t_pr_auc": t_pr[i],
+                    "val_time": val_time[i],
                     "val_loss": val_loss[i],
                     "v_roc_auc": v_roc[i],
                     "v_pr_auc": v_pr[i],

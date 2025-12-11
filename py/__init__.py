@@ -4,7 +4,7 @@ from jan.py.plot_tensor import plotHW, plotHWC, plotCW
 from jan.py.compare_specs import compare_specs
 from jan.py.plot_cross_metrics import plot_cross_metrics
 from jan.py.AtrrDict import AttrDict
-from jan.py.print_opts import print_progress, opt_status, opt_status_pretty
+from jan.py.print_opts import print_progress2, opt_status, opt_status_pretty
 from jan.py.collect_metrics import collect_metrics, extract_dataset_sizes
 from jan.py.ds_utils import get_ds_info
 from jan.py.dict_utils import get_nested

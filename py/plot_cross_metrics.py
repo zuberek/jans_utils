@@ -17,6 +17,7 @@ def plot_cross_metrics(
     log_dir: Path | str,
     metric: str = "v_pr_auc",
     plot_exp_params: list[str] | None = None,
+    legend_fontsize = None,
 ):
     # compute last values
     # best_vals = (
@@ -85,8 +86,11 @@ def plot_cross_metrics(
     #     plt.figtext(0.1, 0.83, f"Params    | {params_str}", fontsize=9)
         
     # plt.subplots_adjust(top=0.8)
+    if legend_fontsize:
+        plt.legend(fontsize=legend_fontsize)
+    else:  
+        plt.legend()
     
-    plt.legend()
     plt.tight_layout()
     plt.show()
 
