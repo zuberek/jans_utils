@@ -313,7 +313,7 @@ def find_example(ds: tf.data.Dataset, conditions: dict, max_iter=10_000):
     return ds
 
 from pathlib import Path
-from utils import get_shard_idxs, select_shards # diagnosing
+# from utils import get_shard_idxs, select_shards # diagnosing
 from framework.data.pipelines.load import Load
 
 class DS:
@@ -331,15 +331,16 @@ class DS:
         if isinstance(dataset, Path) or isinstance(dataset, str):
             dpath = Path(dataset)
             
-            def reader_func(shards):
-                if exam_names:
-                    shard_idxs = get_shard_idxs(dpath, exam_names)
-                    shards = select_shards(shards, shard_idxs)
-                shards = shards.flat_map(lambda x: x)
-                return shards
+            # def reader_func(shards):
+            #     if exam_names:
+            #         shard_idxs = get_shard_idxs(dpath, exam_names)
+            #         shards = select_shards(shards, shard_idxs)
+            #     shards = shards.flat_map(lambda x: x)
+            #     return shards
             
             dataset = Load(str(dpath.parent), dpath.name, 
-                reader_func=reader_func)()
+                # reader_func=reader_func
+                )()
         
         if dataset is None:
             dataset = namespace.get('ds')

@@ -7,7 +7,7 @@ from envvars import ENV
 
 LOCAL_RUN = False
 VISUALIZE = False
-DUMP_VAL_RESULTS_TO_NPY = False
+# DUMP_VAL_RESULTS_TO_NPY = False
 EXP_DATASET_PATH = str(Path(ENV.DATA_DIR) / 'datasets' / 'DS_27-08-2025')
 TRAIN_OUT_DIR = Path(ENV.EXPERIMENTS_DIR) / 'Train_with_CNV_BEST'
 
@@ -26,16 +26,18 @@ def init(parameters):
         parameters['data_dir'] = EXP_DATASET_PATH
         parameters['dataset_records'] = (EXP_DATASET_PATH, 'anom-test')
         parameters['train_out_dir'] = TRAIN_OUT_DIR
-        param_dict = dict(parameters.items())
-        combination = parameters.combinations.get_combination_by_ind(0)
-        combination = combination if combination else {}
-        full_comb = {**combination, **param_dict}
+        params = dict(parameters.items())
+        params['run_output_folder'] = params['out_dir']
+        if parameters.combinations.get_combinations():
+            combination = parameters.combinations.get_combination_by_ind(0)
+            combination = combination if combination else {}
+            params = {**combination, **params}
         
         # # remove duplicates
         # for k in list(combination.keys()):
-        #     if k in param_dict:
-        #         del param_dict[k]
+        #     if k in params:
+        #         del params[k]
         
         ns = _get_target_namespace()
-        ns['params'] = AttrDict(**full_comb)
+        ns['params'] = AttrDict(**params)
     

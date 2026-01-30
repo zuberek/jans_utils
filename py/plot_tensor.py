@@ -13,8 +13,9 @@ def plotHW(tensor, ax=None, interactive=False, legend=False):
         fig.show()
     else:
         ax = ax if ax else plt.gca() 
-        arr = tensor.numpy()
-        im = ax.imshow(arr, vmin=0, vmax=1, cmap="Greys_r")
+        if not isinstance(tensor, np.ndarray):
+            tensor = tensor.numpy()
+        im = ax.imshow(tensor, vmin=0, vmax=1, cmap="Greys_r")
         ax.set_xticks([])
         ax.set_yticks([])
         # im = ax.imshow(arr, vmin=0, vmax=1, cmap="Greys")
